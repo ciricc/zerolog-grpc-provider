@@ -1,0 +1,17 @@
+{
+	"go.testEnvVars": {
+		"SERVICE_POSTGRES_URL": "postgres://postgres:postgres@postgres:5432/testing?sslmode=disable",
+	},
+	"go.testFlags": [
+		"-test.v",
+		"-args",
+		"-config=${workspaceFolder}/config/config.yml"
+	],
+	"go.lintTool": "golangci-lint",
+	"go.lintFlags": [
+		"--fast"
+	],
+	"conventionalCommits.scopes": [
+		"config"
+	]
+}
