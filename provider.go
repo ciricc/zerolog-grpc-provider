@@ -53,17 +53,19 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 			loggerCtx = z.loggerWithRequestId(loggerCtx)
 		}
 
+		logger := loggerCtx.Logger()
+		loggerWithRequestFields := loggerCtx
+
 		if z.options.provideRequestFieldsToLogger {
-			loggerCtx = loggerCtx.Fields(map[string]interface{}{
+			loggerWithRequestFields = loggerCtx.Fields(map[string]interface{}{
 				grpcRequestFieldName: req,
 				grpcMethodFieldName:  info.FullMethod,
 				grpcServerFieldName:  info.Server,
 			})
 		}
 
-		logger := loggerCtx.Logger()
-
 		if z.options.logRequests {
+			logger := loggerWithRequestFields.Logger()
 			(&logger).Debug().Msg("new unary request")
 		}
 
