@@ -13,6 +13,8 @@ type Options struct {
 	useRequestId bool
 	// Zerolog logger
 	requestLogger *zerolog.Logger
+	// Function which can modify request values before logging into output
+	requestValueModifier RequestValueModifier
 }
 
 type Option func(opts *Options) error
@@ -22,6 +24,16 @@ type Option func(opts *Options) error
 func WithLogRequests(logging bool) Option {
 	return func(opts *Options) error {
 		opts.logRequests = logging
+
+		return nil
+	}
+}
+
+// Add request value modifier for modifying request values before they are sent
+// to the output
+func WithRequestValueModifier(modifier RequestValueModifier) Option {
+	return func(opts *Options) error {
+		opts.requestValueModifier = modifier
 
 		return nil
 	}

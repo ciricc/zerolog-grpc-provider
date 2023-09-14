@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 type ZerologGrpcProvider interface {
@@ -57,8 +58,25 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 		loggerWithRequestFields := loggerCtx
 
 		if z.options.provideRequestFieldsToLogger {
+			requestProtoMessage, ok := req.(proto.Message)
+			if !ok {
+				return nil, ErrFailedToCastProtoMessage
+			}
+
+			requestMap, err := protobufToMap(requestProtoMessage)
+			if err != nil {
+				return nil, fmt.Errorf("failed to cast protobuf message into map: %w", err)
+			}
+
+			if z.options.requestValueModifier != nil {
+				err = z.modifyRequestValues(requestMap)
+				if err != nil {
+					return nil, err
+				}
+			}
+
 			loggerWithRequestFields = loggerCtx.Fields(map[string]interface{}{
-				grpcRequestFieldName: req,
+				grpcRequestFieldName: requestMap,
 				grpcMethodFieldName:  info.FullMethod,
 				grpcServerFieldName:  info.Server,
 			})
@@ -112,6 +130,24 @@ func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 
 		return err
 	}
+}
+
+func (z *zerologGrpcProvider) modifyRequestValues(requestMap map[string]interface{}) error {
+	for k, v := range requestMap {
+		vString, ok := v.(string)
+		if !ok {
+			vString = fmt.Sprintf("%v", v)
+		}
+
+		newValue, err := z.options.requestValueModifier(k, vString)
+		if err != nil {
+			return fmt.Errorf("failed to modify request value (key=%s): %w", k, err)
+		}
+
+		requestMap[k] = newValue
+	}
+
+	return nil
 }
 
 func (z *zerologGrpcProvider) loggerWithRequestId(ctx zerolog.Context) zerolog.Context {
