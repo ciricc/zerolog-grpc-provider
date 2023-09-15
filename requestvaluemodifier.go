@@ -4,7 +4,7 @@ package zerologgrpcprovider
 // You can use if, for example, for hiding sensitive information from the output
 // Example:
 //
-//	func(key, value string) (string, error) {
+//	func(key string, value any) (any, error) {
 //	 if key == "password" {
 //		return "<sensitive_data", nil
 //	 }
