@@ -132,14 +132,17 @@ func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 	}
 }
 
-func (z *zerologGrpcProvider) modifyRequestValues(requestMap map[string]interface{}) error {
+func (z *zerologGrpcProvider) modifyRequestValues(requestMap map[string]any) error {
 	for k, v := range requestMap {
-		vString, ok := v.(string)
-		if !ok {
-			vString = fmt.Sprintf("%v", v)
+		mapValue, isMap := v.(map[string]any)
+		if isMap {
+			err := z.modifyRequestValues(mapValue)
+			if err != nil {
+				return err
+			}
 		}
 
-		newValue, err := z.options.requestValueModifier(k, vString)
+		newValue, err := z.options.requestValueModifier(k, v)
 		if err != nil {
 			return fmt.Errorf("failed to modify request value (key=%s): %w", k, err)
 		}
