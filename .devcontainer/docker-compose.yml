@@ -1,6 +1,6 @@
 version: '3'
 services:
-  zerologgrpcprovider:
+  service:
     build:
       context: .
       dockerfile: Dockerfile
@@ -9,6 +9,7 @@ services:
         NODE_VERSION: "16"
     network_mode: host
     environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       GOPRIVATE: ${GOPRIVATE}
     volumes:
       - ..:/workspace:cached

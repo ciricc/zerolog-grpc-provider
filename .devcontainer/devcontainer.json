@@ -1,7 +1,7 @@
 {
-	"name": "Zerolog gRPC provider",
+	"name": "Microservice template",
 	"dockerComposeFile": "docker-compose.yml",
-	"service": "zerologgrpcprovider",
+	"service": "service",
 	"workspaceFolder": "/workspace",
 	"customizations": {
 		"vscode": {
@@ -17,7 +17,10 @@
 				"maxnatchanon.go-struct-tag-autogen",
 				"TabNine.tabnine-vscode",
 				"eamodio.gitlens"
-			]
+			],
+			"environmentVariables": {
+				"GOPRIVATE": "gitlab.com/safe-cheating"
+			}
 		}
 	},
 	"remoteUser": "vscode"

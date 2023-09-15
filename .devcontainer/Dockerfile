@@ -11,16 +11,6 @@ RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-
 
 RUN apt update
 
-RUN apt -y install postgresql-client-15 protobuf-compiler
-RUN apt -y install python python3-pip
-RUN apt --fix-broken install
-RUN apt -y install default-jre
-
-RUN pip install pgcli
-
-# Git config, say use ssh-format url instead of http for downloading private github packages
-RUN git config --global url.git@github.com:.insteadOf https://github.com/
-
 USER vscode
 
 # Linters runner

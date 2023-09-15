@@ -10,4 +10,4 @@ package zerologgrpcprovider
 //	 }
 //	 return value, nil
 //	}
-type RequestValueModifier func(key, value any) (newValue any, err error)
+type RequestValueModifier func(key string, value any) (newValue any, err error)
