@@ -3,7 +3,7 @@ package zerologgrpcprovider
 // Field name for the request identifier value
 const grpcRequestIdFieldName = "grpcRequestId"
 
-// Field name for the stream infromation structure
+// Field name for the stream information structure
 const grpcStreamInfoFieldName = "grpcStreamInfo"
 
 // Field name for the grpc request structure

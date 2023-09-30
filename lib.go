@@ -9,7 +9,6 @@ import (
 )
 
 func protobufToMap(v proto.Message) (map[string]interface{}, error) {
-
 	vBytes, err := protojson.Marshal(v)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal message: %w", err)
@@ -23,5 +22,4 @@ func protobufToMap(v proto.Message) (map[string]interface{}, error) {
 	}
 
 	return vMap, nil
-
 }
