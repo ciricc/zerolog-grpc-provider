@@ -16,10 +16,13 @@ type ZerologGrpcProvider interface {
 	UnaryInterceptor() grpc.UnaryServerInterceptor
 	// StreamInterceptor returns interceptor compatible with grpc api for provide zerolog logger
 	StreamInterceptor() grpc.StreamServerInterceptor
+	// WithModifiers returns object for customizing zerolog logger
+	WithModifiers() *loggerModifier
 }
 
 type zerologGrpcProvider struct {
-	options *Options
+	options  *Options
+	modifier *loggerModifier
 }
 
 func New(opts ...Option) (ZerologGrpcProvider, error) {
@@ -42,6 +45,9 @@ func New(opts ...Option) (ZerologGrpcProvider, error) {
 
 	return &zerologGrpcProvider{
 		options: &options,
+		modifier: &loggerModifier{
+			modifiers: []loggerModification{},
+		},
 	}, nil
 }
 
@@ -49,7 +55,7 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (
 		resp interface{}, err error,
 	) {
-		loggerCtx := z.options.requestLogger.With().Bool(grpcUnaryInterceptorFieldName, true)
+		loggerCtx := z.getLogger(ctx).With().Bool(grpcUnaryInterceptorFieldName, true)
 		if z.options.useRequestId {
 			loggerCtx = z.loggerWithRequestId(loggerCtx)
 		}
@@ -100,7 +106,9 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 
 func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		loggerCtx := z.options.requestLogger.With().Bool(grpcUnaryInterceptorFieldName, false)
+		ctx := ss.Context()
+
+		loggerCtx := z.getLogger(ctx).With().Bool(grpcUnaryInterceptorFieldName, false)
 		if z.options.useRequestId {
 			loggerCtx = z.loggerWithRequestId(loggerCtx)
 		}
@@ -119,12 +127,13 @@ func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 
 		wrapper := serverStreamWrapper{
 			ServerStream: ss,
-			ctx:          contextWithLogger(ss.Context(), &logger),
+			ctx:          contextWithLogger(ctx, &logger),
 		}
 
 		err := handler(srv, &wrapper)
 		if err != nil && z.options.logErrors {
 			(&logger).Err(err).Msg("stream request error")
+
 			return err
 		}
 
@@ -155,4 +164,14 @@ func (z *zerologGrpcProvider) modifyRequestValues(requestMap map[string]any) err
 
 func (z *zerologGrpcProvider) loggerWithRequestId(ctx zerolog.Context) zerolog.Context {
 	return ctx.Str(grpcRequestIdFieldName, uuid.NewString())
+}
+
+func (z *zerologGrpcProvider) getLogger(ctx context.Context) zerolog.Logger {
+	newLogger := z.modifier.getModifiedLogger(ctx, *z.options.requestLogger)
+
+	return newLogger
+}
+
+func (z *zerologGrpcProvider) WithModifiers() *loggerModifier {
+	return z.modifier
 }
