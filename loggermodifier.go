@@ -6,17 +6,19 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type loggerModification func(context.Context, zerolog.Logger) (zerolog.Logger, error)
+type loggerModifier func(context.Context, zerolog.Logger) (zerolog.Logger, error)
 
-type loggerModifier struct {
-	modifiers []loggerModification
+type loggerModifiers struct {
+	modifiers []loggerModifier
 }
 
-// CustomFields modifies the logger by adding custom fields.
+// AddFields modifies the logger by adding custom fields.
 //
 // It accepts a provider function that returns a map of string to any type,
 // which represents the custom fields to be added to the logger.
-func (c *loggerModifier) CustomFields(provider func(ctx context.Context) map[string]any) *loggerModifier {
+func (c *loggerModifiers) AddFields(
+	provider func(ctx context.Context) map[string]interface{},
+) *loggerModifiers {
 	modifier := func(ctx context.Context, logger zerolog.Logger) (zerolog.Logger, error) {
 		fields := provider(ctx)
 		if fields == nil {
@@ -34,7 +36,7 @@ func (c *loggerModifier) CustomFields(provider func(ctx context.Context) map[str
 	return c
 }
 
-func (c *loggerModifier) getModifiedLogger(ctx context.Context, logger zerolog.Logger) zerolog.Logger {
+func (c *loggerModifiers) getModifiedLogger(ctx context.Context, logger zerolog.Logger) (zerolog.Logger, error) {
 	newLogger := logger
 
 	for _, modifier := range c.modifiers {

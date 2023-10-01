@@ -17,12 +17,12 @@ type ZerologGrpcProvider interface {
 	// StreamInterceptor returns interceptor compatible with grpc api for provide zerolog logger
 	StreamInterceptor() grpc.StreamServerInterceptor
 	// WithModifiers returns object for customizing zerolog logger
-	WithModifiers() *loggerModifier
+	WithModifiers() *loggerModifiers
 }
 
 type zerologGrpcProvider struct {
-	options  *Options
-	modifier *loggerModifier
+	options   *Options
+	modifiers *loggerModifiers
 }
 
 func New(opts ...Option) (ZerologGrpcProvider, error) {
@@ -45,8 +45,8 @@ func New(opts ...Option) (ZerologGrpcProvider, error) {
 
 	return &zerologGrpcProvider{
 		options: &options,
-		modifier: &loggerModifier{
-			modifiers: []loggerModification{},
+		modifiers: &loggerModifiers{
+			modifiers: []loggerModifier{},
 		},
 	}, nil
 }
@@ -172,6 +172,6 @@ func (z *zerologGrpcProvider) getLogger(ctx context.Context) zerolog.Logger {
 	return newLogger
 }
 
-func (z *zerologGrpcProvider) WithModifiers() *loggerModifier {
-	return z.modifier
+func (z *zerologGrpcProvider) WithModifiers() *loggerModifiers {
+	return z.modifiers
 }
