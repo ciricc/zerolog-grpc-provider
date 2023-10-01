@@ -42,11 +42,11 @@ func (c *loggerModifiers) getModifiedLogger(ctx context.Context, logger zerolog.
 	for _, modifier := range c.modifiers {
 		modifiedLogger, err := modifier(ctx, logger)
 		if err != nil {
-			continue
+			return logger, err
 		}
 
 		newLogger = modifiedLogger
 	}
 
-	return newLogger
+	return newLogger, nil
 }

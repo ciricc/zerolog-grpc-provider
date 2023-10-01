@@ -55,7 +55,12 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (
 		resp interface{}, err error,
 	) {
-		loggerCtx := z.getLogger(ctx).With().Bool(grpcUnaryInterceptorFieldName, true)
+		initialLogger, err := z.getLogger(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		loggerCtx := initialLogger.With().Bool(grpcUnaryInterceptorFieldName, true)
 		if z.options.useRequestId {
 			loggerCtx = z.loggerWithRequestId(loggerCtx)
 		}
@@ -108,7 +113,12 @@ func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx := ss.Context()
 
-		loggerCtx := z.getLogger(ctx).With().Bool(grpcUnaryInterceptorFieldName, false)
+		initialLogger, err := z.getLogger(ctx)
+		if err != nil {
+			return err
+		}
+
+		loggerCtx := initialLogger.With().Bool(grpcUnaryInterceptorFieldName, false)
 		if z.options.useRequestId {
 			loggerCtx = z.loggerWithRequestId(loggerCtx)
 		}
@@ -130,7 +140,7 @@ func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 			ctx:          contextWithLogger(ctx, &logger),
 		}
 
-		err := handler(srv, &wrapper)
+		err = handler(srv, &wrapper)
 		if err != nil && z.options.logErrors {
 			(&logger).Err(err).Msg("stream request error")
 
@@ -166,10 +176,13 @@ func (z *zerologGrpcProvider) loggerWithRequestId(ctx zerolog.Context) zerolog.C
 	return ctx.Str(grpcRequestIdFieldName, uuid.NewString())
 }
 
-func (z *zerologGrpcProvider) getLogger(ctx context.Context) zerolog.Logger {
-	newLogger := z.modifier.getModifiedLogger(ctx, *z.options.requestLogger)
+func (z *zerologGrpcProvider) getLogger(ctx context.Context) (*zerolog.Logger, error) {
+	newLogger, err := z.modifiers.getModifiedLogger(ctx, *z.options.requestLogger)
+	if err != nil {
+		return z.options.requestLogger, err
+	}
 
-	return newLogger
+	return &newLogger, nil
 }
 
 func (z *zerologGrpcProvider) WithModifiers() *loggerModifiers {
