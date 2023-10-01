@@ -1,6 +1,8 @@
 package zerologgrpcprovider
 
-import "github.com/rs/zerolog"
+import (
+	"github.com/rs/zerolog"
+)
 
 type Options struct {
 	// Whether need to log requests or not
@@ -19,7 +21,7 @@ type Options struct {
 
 type Option func(opts *Options) error
 
-// When loggin is true, the logger will print messages by self into zerolog output.
+// When logging is true, the logger will print messages by self into zerolog output.
 // Default value is true
 func WithLogRequests(logging bool) Option {
 	return func(opts *Options) error {

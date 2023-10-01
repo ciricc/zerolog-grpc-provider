@@ -16,10 +16,13 @@ type ZerologGrpcProvider interface {
 	UnaryInterceptor() grpc.UnaryServerInterceptor
 	// StreamInterceptor returns interceptor compatible with grpc api for provide zerolog logger
 	StreamInterceptor() grpc.StreamServerInterceptor
+	// WithModifiers returns object for customizing zerolog logger
+	WithModifiers() *loggerModifiers
 }
 
 type zerologGrpcProvider struct {
-	options *Options
+	options   *Options
+	modifiers *loggerModifiers
 }
 
 func New(opts ...Option) (ZerologGrpcProvider, error) {
@@ -42,6 +45,9 @@ func New(opts ...Option) (ZerologGrpcProvider, error) {
 
 	return &zerologGrpcProvider{
 		options: &options,
+		modifiers: &loggerModifiers{
+			modifiers: []loggerModifier{},
+		},
 	}, nil
 }
 
@@ -49,7 +55,12 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (
 		resp interface{}, err error,
 	) {
-		loggerCtx := z.options.requestLogger.With().Bool(grpcUnaryInterceptorFieldName, true)
+		initialLogger, err := z.getLogger(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		loggerCtx := initialLogger.With().Bool(grpcUnaryInterceptorFieldName, true)
 		if z.options.useRequestId {
 			loggerCtx = z.loggerWithRequestId(loggerCtx)
 		}
@@ -100,7 +111,14 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 
 func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		loggerCtx := z.options.requestLogger.With().Bool(grpcUnaryInterceptorFieldName, false)
+		ctx := ss.Context()
+
+		initialLogger, err := z.getLogger(ctx)
+		if err != nil {
+			return err
+		}
+
+		loggerCtx := initialLogger.With().Bool(grpcUnaryInterceptorFieldName, false)
 		if z.options.useRequestId {
 			loggerCtx = z.loggerWithRequestId(loggerCtx)
 		}
@@ -119,12 +137,13 @@ func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 
 		wrapper := serverStreamWrapper{
 			ServerStream: ss,
-			ctx:          contextWithLogger(ss.Context(), &logger),
+			ctx:          contextWithLogger(ctx, &logger),
 		}
 
-		err := handler(srv, &wrapper)
+		err = handler(srv, &wrapper)
 		if err != nil && z.options.logErrors {
 			(&logger).Err(err).Msg("stream request error")
+
 			return err
 		}
 
@@ -155,4 +174,17 @@ func (z *zerologGrpcProvider) modifyRequestValues(requestMap map[string]any) err
 
 func (z *zerologGrpcProvider) loggerWithRequestId(ctx zerolog.Context) zerolog.Context {
 	return ctx.Str(grpcRequestIdFieldName, uuid.NewString())
+}
+
+func (z *zerologGrpcProvider) getLogger(ctx context.Context) (*zerolog.Logger, error) {
+	newLogger, err := z.modifiers.getModifiedLogger(ctx, *z.options.requestLogger)
+	if err != nil {
+		return z.options.requestLogger, err
+	}
+
+	return &newLogger, nil
+}
+
+func (z *zerologGrpcProvider) WithModifiers() *loggerModifiers {
+	return z.modifiers
 }
