@@ -98,7 +98,7 @@ func (z *zerologGrpcProvider) UnaryInterceptor() grpc.UnaryServerInterceptor {
 			(&logger).Debug().Msg("new unary request")
 		}
 
-		res, err := handler(contextWithLogger(ctx, &logger), req)
+		res, err := handler(ContextWithLogger(ctx, &logger), req)
 		if err != nil && z.options.logErrors {
 			(&logger).Err(err).Msg("unary request error")
 
@@ -137,7 +137,7 @@ func (z *zerologGrpcProvider) StreamInterceptor() grpc.StreamServerInterceptor {
 
 		wrapper := serverStreamWrapper{
 			ServerStream: ss,
-			ctx:          contextWithLogger(ctx, &logger),
+			ctx:          ContextWithLogger(ctx, &logger),
 		}
 
 		err = handler(srv, &wrapper)
